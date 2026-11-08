@@ -4,12 +4,25 @@ import { readEntities, type SessionEntities } from "@/lib/chat/memory";
 
 declare const globalThis: { __pgPool?: Pool };
 
+/**
+ * Supabase's pooler presents a certificate from a private CA that Node does not
+ * trust, so `sslmode=require` in the URL fails with "self-signed certificate in
+ * certificate chain". The link stays encrypted; only the CA check is relaxed.
+ * Local databases are left without TLS.
+ */
+export function poolConnection(url: string): { connectionString: string; ssl?: { rejectUnauthorized: boolean } } {
+  const parsed = new URL(url);
+  const local = ["localhost", "127.0.0.1", "::1", "postgres"].includes(parsed.hostname);
+  parsed.searchParams.delete("sslmode");
+  parsed.searchParams.delete("uselibpqcompat");
+  return local ? { connectionString: parsed.toString() } : { connectionString: parsed.toString(), ssl: { rejectUnauthorized: false } };
+}
 export function getPool(): Pool {
   if (!globalThis.__pgPool) {
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) throw new Error("DATABASE_URL is not set. Add it to the environment variables.");
     // Small pool and a connect timeout: serverless instances come and go quickly.
-    globalThis.__pgPool = new Pool({ connectionString, max: 3, connectionTimeoutMillis: 8000, idleTimeoutMillis: 10000 });
+    globalThis.__pgPool = new Pool({ ...poolConnection(connectionString), max: 3, connectionTimeoutMillis: 8000, idleTimeoutMillis: 10000 });
   }
   return globalThis.__pgPool;
 }
