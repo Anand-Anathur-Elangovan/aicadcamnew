@@ -1,0 +1,36 @@
+%PDF-1.4
+1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
+2 0 obj << /Type /Pages /Count 1 /Kids [3 0 R] >> endobj
+3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj
+4 0 obj << /Length 659 >> stream
+BT
+/F1 12 Tf
+1 0 0 1 36 720 Tm (HOLLOW CYLINDER FROM RECTANGULAR BAR) Tj
+1 0 0 1 36 702 Tm (PART NUMBER: HC-100) Tj
+1 0 0 1 36 684 Tm (REVISION: A) Tj
+1 0 0 1 36 666 Tm (MATERIAL: Aluminium 6061-T6) Tj
+1 0 0 1 36 648 Tm (STOCK: rectangular bar 40 x 40 x 80 mm) Tj
+1 0 0 1 36 630 Tm (FINISHED OUTSIDE DIAMETER: 32 mm) Tj
+1 0 0 1 36 612 Tm (BORE: 16 mm through) Tj
+1 0 0 1 36 594 Tm (FINISHED LENGTH: 80 mm) Tj
+1 0 0 1 36 576 Tm (PROCESS: turn the rectangular bar to a cylinder, then bore the hole) Tj
+1 0 0 1 36 558 Tm (HOLD: 12 mm grip in a 3-jaw chuck. The bore stops clear of the jaws.) Tj
+ET
+0.8 w
+36 360 240 70 re S
+36 395 m 276 395 l S
+320 360 90 70 re S
+endstream endobj
+5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000951 00000 n 
+trailer << /Size 6 /Root 1 0 R >>
+startxref
+1021
+%%EOF

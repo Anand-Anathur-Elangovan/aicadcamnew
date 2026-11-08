@@ -1,0 +1,3 @@
+router_no,op_no,op_name,work_center,standard_minutes,status
+R-46001,10,Saw,Saw,40,Done
+R-46001,20,CNC mill,Mill,80,Running

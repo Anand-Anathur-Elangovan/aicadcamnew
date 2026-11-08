@@ -1,0 +1,2 @@
+router_no,part_number,order_qty,qty_issued,heat_lot,status,due_on,released_on,sales_order
+R-46001,SP-900,10,10,H-9001,Running,2026-11-20,2026-11-06,SO-90001
