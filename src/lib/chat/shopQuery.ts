@@ -1,15 +1,6 @@
-import { Pool } from "pg";
-
-declare const globalThis: { __pgPool?: Pool };
+import { getPool } from "@/lib/chat/sessions";
 
 const ALLOWED_VIEWS = ["shop_v_labor", "shop_v_job_balance", "shop_v_quality", "shop_v_machines", "shop_v_stages"];
-
-function getPool(): Pool {
-  if (!globalThis.__pgPool) {
-    globalThis.__pgPool = new Pool({ connectionString: process.env.DATABASE_URL });
-  }
-  return globalThis.__pgPool;
-}
 
 export function extractSql(raw: string): string {
   const fenced = raw.match(/```sql\s*([\s\S]*?)```/i);

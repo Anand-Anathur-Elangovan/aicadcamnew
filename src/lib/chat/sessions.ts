@@ -6,7 +6,10 @@ declare const globalThis: { __pgPool?: Pool };
 
 export function getPool(): Pool {
   if (!globalThis.__pgPool) {
-    globalThis.__pgPool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) throw new Error("DATABASE_URL is not set. Add it to the environment variables.");
+    // Small pool and a connect timeout: serverless instances come and go quickly.
+    globalThis.__pgPool = new Pool({ connectionString, max: 3, connectionTimeoutMillis: 8000, idleTimeoutMillis: 10000 });
   }
   return globalThis.__pgPool;
 }

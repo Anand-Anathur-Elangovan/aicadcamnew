@@ -1,5 +1,5 @@
 import { ChatInterface } from "@/components/chat/ChatInterface";
-import { Settings, Database } from "lucide-react";
+import { Home, Database } from "lucide-react";
 import Link from "next/link";
 
 export const metadata = { title: "AI Chat | Manufacturing Intelligence" };
@@ -20,6 +20,13 @@ export default function ChatPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <Home className="h-3.5 w-3.5" />
+              Home
+            </Link>
             <Link
               href="/admin/ingestion"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 text-xs text-gray-700 hover:bg-gray-50 transition-colors"

@@ -19,7 +19,14 @@ export default async function RoutersPage({
   const params = await searchParams;
   const query = one(params.q);
   const status = one(params.status);
-  const routers = await listRouters(query, status);
+  let routers: Awaited<ReturnType<typeof listRouters>> = [];
+  let failure = "";
+  try {
+    routers = await listRouters(query, status);
+  } catch (err) {
+    console.error("[/routers] could not load routers", err);
+    failure = err instanceof Error ? err.message : "Could not load routers";
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -28,6 +35,12 @@ export default async function RoutersPage({
         <p className="text-sm text-gray-600">
           Each router is one released batch. The counts are the same job balance Ask AI reads.
         </p>
+        {failure && (
+          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            Could not load the routers. Check that DATABASE_URL points at the Supabase pooler and the shop data is seeded.
+            <span className="block text-xs text-red-600 mt-1">{failure}</span>
+          </div>
+        )}
         <form className="flex flex-wrap gap-2" action="/routers">
           <input
             name="q"
