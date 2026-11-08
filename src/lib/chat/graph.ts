@@ -607,15 +607,23 @@ async function remember(state: typeof AskState.State): Promise<AskUpdate> {
   }
 }
 
+/**
+ * LangGraph types the runtime writer as unknown; every node here writes AskStreamEvent
+ * objects, so the cast lives in one place.
+ */
+function node<R>(fn: (state: typeof AskState.State, runtime: AskRuntime) => R) {
+  return fn as unknown as (state: typeof AskState.State, runtime: Runtime) => R;
+}
+
 const builder = new StateGraph(AskState)
   .addNode("load_session", loadSession)
-  .addNode("save_user", saveUser)
-  .addNode("classify", classify)
-  .addNode("orchestrate", orchestrate)
-  .addNode("compose_answer", answer)
-  .addNode("ask_clarify", askClarify)
-  .addNode("fallback", fallback)
-  .addNode("save_assistant", saveAssistant)
+  .addNode("save_user", node(saveUser))
+  .addNode("classify", node(classify))
+  .addNode("orchestrate", node(orchestrate))
+  .addNode("compose_answer", node(answer))
+  .addNode("ask_clarify", node(askClarify))
+  .addNode("fallback", node(fallback))
+  .addNode("save_assistant", node(saveAssistant))
   .addNode("remember", remember)
   .addEdge(START, "load_session")
   .addEdge("load_session", "save_user")

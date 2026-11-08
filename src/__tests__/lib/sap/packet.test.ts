@@ -9,7 +9,7 @@ import { readSapPacket } from "@/lib/sap/loadPacket.mjs";
 describe("SAP file packet", () => {
   it("keeps a comma that sits inside quotes", () => {
     const rows = parseCsv('part_number,part_name\nSP-900,"Plate, sample"\n');
-    expect(rows[0].part_name).toBe("Plate, sample");
+    expect((rows[0] as Record<string, string>).part_name).toBe("Plate, sample");
   });
 
   it("rejects a router status outside the shop list", () => {

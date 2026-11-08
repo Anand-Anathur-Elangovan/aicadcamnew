@@ -143,7 +143,7 @@ describe("createVectorProvider factory", () => {
       const provider = createVectorProvider();
       for (const method of METHODS) {
         expect(
-          typeof (provider as Record<string, unknown>)[method],
+          typeof (provider as unknown as Record<string, unknown>)[method],
           `${mode}: ${method} should be a function`
         ).toBe("function");
       }
@@ -197,7 +197,7 @@ describe("createStorageProvider factory", () => {
       const provider = createStorageProvider();
       for (const method of METHODS) {
         expect(
-          typeof (provider as Record<string, unknown>)[method],
+          typeof (provider as unknown as Record<string, unknown>)[method],
           `${mode}: ${method} should be a function`
         ).toBe("function");
       }

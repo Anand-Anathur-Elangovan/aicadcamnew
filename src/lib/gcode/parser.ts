@@ -240,7 +240,7 @@ function approximateArc(
   const cx = from[0] + I;
   const cy = from[1] + J;
 
-  let startAngle = Math.atan2(from[1] - cy, from[0] - cx);
+  const startAngle = Math.atan2(from[1] - cy, from[0] - cx);
   let endAngle   = Math.atan2(to[1]   - cy, to[0]   - cx);
   const radius   = R ?? Math.hypot(from[0] - cx, from[1] - cy);
 

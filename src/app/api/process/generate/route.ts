@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
       textOf.set(source.filename, parsed.text);
     }
 
-    let extracted: PartFeatures[] = [];
+    const extracted: PartFeatures[] = [];
     if (!readTurningJob(texts.join("\n"))) {
       const drawings = sources.filter((source) => !isCad(source.filename));
       const models = sources.filter((source) => isCad(source.filename));

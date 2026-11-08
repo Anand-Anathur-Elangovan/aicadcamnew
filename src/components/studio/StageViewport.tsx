@@ -14,7 +14,9 @@ export default function StageViewport({ job, stage, isPlaying, onPlayEnd }: Prop
   const mountRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef(0);
   const onPlayEndRef = useRef(onPlayEnd);
-  onPlayEndRef.current = onPlayEnd;
+  useEffect(() => {
+    onPlayEndRef.current = onPlayEnd;
+  }, [onPlayEnd]);
 
   useEffect(() => {
     const container = mountRef.current;

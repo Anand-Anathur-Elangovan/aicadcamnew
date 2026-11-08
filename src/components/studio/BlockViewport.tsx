@@ -39,7 +39,9 @@ export default function BlockViewport({ stock, stage, previous = NO_CUTS, isPlay
   const mountRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef(0);
   const onPlayEndRef = useRef(onPlayEnd);
-  onPlayEndRef.current = onPlayEnd;
+  useEffect(() => {
+    onPlayEndRef.current = onPlayEnd;
+  }, [onPlayEnd]);
 
   useEffect(() => {
     const container = mountRef.current;
