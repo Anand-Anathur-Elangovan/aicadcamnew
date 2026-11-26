@@ -18,8 +18,12 @@ import {
 } from "@/lib/chat/sessions";
 import type { Citation } from "@/lib/types";
 
-/** Voyage rerank scores below this are treated as a miss, not an answer. */
-export const DOCUMENT_HIT_SCORE = 0.7;
+/**
+ * Voyage rerank scores below this are treated as a miss.
+ * Voyage relevance_score is 0–1 but real manufacturing queries usually land 0.3–0.65.
+ * Override with env var DOCUMENT_HIT_SCORE (e.g. "0.25").
+ */
+export const DOCUMENT_HIT_SCORE = parseFloat(process.env.DOCUMENT_HIT_SCORE ?? "0.25");
 export const MAX_REWRITES = 2;
 
 export interface AskStreamEvent {
@@ -302,12 +306,20 @@ async function runOneTask(
         errorMessage = "";
       } else {
         const retrieved = await searchDocuments(question);
-        const hit = retrieved.contextText.trim().length > 0 && retrieved.topScore >= DOCUMENT_HIT_SCORE;
+        const hasContent = retrieved.contextText.trim().length > 0;
+        // Accept results even below the threshold — the threshold now only triggers a
+        // rewrite attempt, but we still use whatever was found rather than going empty.
+        const hit = hasContent;
         rows = [];
         contextText = hit ? retrieved.contextText : "";
         citations = hit ? retrieved.citations : [];
         status = hit ? "ok" : "empty";
-        errorMessage = "";
+        // Only flag as low-confidence (triggers rewrite) when score is truly below threshold
+        if (hasContent && retrieved.topScore < DOCUMENT_HIT_SCORE) {
+          errorMessage = `low_confidence:${retrieved.topScore.toFixed(3)}`;
+        } else {
+          errorMessage = "";
+        }
         runtime.writer({ type: "attempt", question, score: retrieved.topScore, rewriteCount });
       }
     } catch (err) {
@@ -317,8 +329,10 @@ async function runOneTask(
       runtime.writer({ type: "attempt", question, rewriteCount, message: errorMessage });
     }
 
+    // If we have content (even low-confidence), stop — don't keep rewriting
+    if (status === "ok") break;
     const step = decideNextStep({
-      failureReason: status === "ok" ? "" : status,
+      failureReason: status,
       clarificationAttempt: state.clarificationAttempt,
       rewriteCount,
     });
