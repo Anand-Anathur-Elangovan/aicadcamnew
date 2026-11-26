@@ -318,8 +318,8 @@ async function runOneTask(
           runtime.writer({
             type: "status",
             message: retrieved.degraded === "bm25_only"
-              ? "Keyword search only (Voyage rate limit — add payment at dashboard.voyageai.com to unlock full AI search)"
-              : "Using keyword ranking (reranker unavailable)",
+              ? "Using keyword search (vector search temporarily unavailable)"
+              : "Using keyword ranking (reranker temporarily unavailable)",
           });
         }
         runtime.writer({ type: "attempt", question, score: retrieved.topScore, rewriteCount });

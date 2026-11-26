@@ -156,11 +156,7 @@ export async function runRAGPipeline(
     rawChunks = [...chunkMap.values()].sort((a, b) => (b.rrfScore ?? 0) - (a.rrfScore ?? 0));
   } catch (embedErr) {
     // ── Tier 2: Voyage embedding unavailable → BM25-only ──────────────────
-    if (isVoyageRateLimit(embedErr)) {
-      console.warn("[RAG] Voyage embedding rate-limited — falling back to BM25-only search");
-    } else {
-      console.warn("[RAG] Embedding failed, falling back to BM25:", embedErr);
-    }
+    console.warn("[RAG] Embedding failed, falling back to BM25-only search:", embedErr);
     degraded = "bm25_only";
     try {
       const bm25Results = await vectorProvider.bm25Search({
@@ -198,11 +194,7 @@ export async function runRAGPipeline(
       .map(({ index, score }) => ({ ...rawChunks[index], rerankScore: score }));
   } catch (rerankErr) {
     // ── Tier 3: no rerank — use RRF score directly ─────────────────────────
-    if (isVoyageRateLimit(rerankErr)) {
-      console.warn("[RAG] Voyage rerank rate-limited — skipping rerank, using RRF order");
-    } else {
-      console.warn("[RAG] Rerank failed, using RRF order:", rerankErr);
-    }
+    console.warn("[RAG] Rerank failed, using RRF score order:", rerankErr);
     degraded = "bm25_no_rerank";
     afterRerank = rawChunks
       .slice(0, (options.topK ?? RERANK_TOP_K) * 2)
