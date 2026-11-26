@@ -106,6 +106,58 @@ class SupabaseVectorProvider implements VectorProvider {
     return (data ?? []).map(mapHybridRow);
   }
 
+  async bm25Search(params: {
+    queryText: string;
+    limit: number;
+    filterCategory?: DocumentCategory;
+    filterPartNumber?: string;
+  }): Promise<RetrievedChunk[]> {
+    // Pure BM25 via PostgreSQL tsvector — no embedding required
+    const { data, error } = await this.client.rpc("bm25_search", {
+      query_text: params.queryText,
+      match_count: params.limit,
+      filter_category: params.filterCategory ?? null,
+      filter_part_number: params.filterPartNumber ?? null,
+    });
+    if (error) {
+      // bm25_search RPC may not exist in older DB migrations; fall back to ILIKE
+      console.warn("[bm25Search] RPC failed, falling back to ILIKE:", error.message);
+      return this.ilikeFallback(params);
+    }
+    return (data ?? []).map(mapHybridRow);
+  }
+
+  /** Last-resort: simple ILIKE search when neither Voyage nor BM25 RPC is available */
+  private async ilikeFallback(params: {
+    queryText: string;
+    limit: number;
+    filterCategory?: DocumentCategory;
+  }): Promise<RetrievedChunk[]> {
+    const terms = params.queryText.split(/\s+/).filter(Boolean).slice(0, 5);
+    if (terms.length === 0) return [];
+    // Build ILIKE conditions for the first few terms
+    let query = this.client
+      .from("chunks")
+      .select("id, document_id, content, page_number, content_type")
+      .ilike("content", `%${terms[0]}%`)
+      .limit(params.limit);
+    if (params.filterCategory) {
+      // join to documents is not trivial in Supabase client; use a secondary filter instead
+    }
+    const { data, error } = await query;
+    if (error || !data) return [];
+    return data.map((row: Record<string, unknown>) => ({
+      chunkId:    String(row.id),
+      documentId: String(row.document_id),
+      content:    String(row.content),
+      pageNumber: row.page_number != null ? Number(row.page_number) : undefined,
+      contentType: row.content_type ? String(row.content_type) : undefined,
+      rrfScore:   0.5,
+      denseRank:  0,
+      sparseRank: 0,
+    }));
+  }
+
   async deleteByDocumentId(documentId: string): Promise<void> {
     const { error } = await this.client.from("chunks").delete().eq("document_id", documentId);
     if (error) throw new Error(`Supabase deleteByDocumentId: ${error.message}`);
@@ -203,6 +255,21 @@ class LocalPostgresVectorProvider implements VectorProvider {
     const { rows } = await pool.query(
       "SELECT * FROM hybrid_search($1::vector, $2, $3, 60, $4, $5)",
       [embeddingStr, params.queryText, params.limit,
+       params.filterCategory ?? null, params.filterPartNumber ?? null]
+    );
+    return rows.map(mapHybridRow);
+  }
+
+  async bm25Search(params: {
+    queryText: string;
+    limit: number;
+    filterCategory?: DocumentCategory;
+    filterPartNumber?: string;
+  }): Promise<RetrievedChunk[]> {
+    const pool = await this.getPool();
+    const { rows } = await pool.query(
+      "SELECT * FROM bm25_search($1, $2, $3, $4)",
+      [params.queryText, params.limit,
        params.filterCategory ?? null, params.filterPartNumber ?? null]
     );
     return rows.map(mapHybridRow);

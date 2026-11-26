@@ -128,6 +128,13 @@ export interface VectorProvider {
     filterCategory?: DocumentCategory;
     filterPartNumber?: string;
   }): Promise<RetrievedChunk[]>;
+  /** BM25-only (keyword) search — no embeddings needed; fallback when Voyage is unavailable */
+  bm25Search(params: {
+    queryText: string;
+    limit: number;
+    filterCategory?: DocumentCategory;
+    filterPartNumber?: string;
+  }): Promise<RetrievedChunk[]>;
   deleteByDocumentId(documentId: string): Promise<void>;
   deleteDocument(id: string): Promise<void>;
   upsertDocument(doc: Omit<Document, "id" | "createdAt" | "updatedAt">): Promise<string>;

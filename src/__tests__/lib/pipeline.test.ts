@@ -89,6 +89,7 @@ const EMPTY_VECTOR_PROVIDER = {
   upsertDocument: vi.fn(),
   updateDocumentStatus: vi.fn(),
   listDocuments: vi.fn(),
+  bm25Search: vi.fn().mockResolvedValue([]),
 };
 
 describe("runRAGPipeline (mocked providers)", () => {

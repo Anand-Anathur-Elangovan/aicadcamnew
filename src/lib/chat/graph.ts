@@ -307,18 +307,20 @@ async function runOneTask(
       } else {
         const retrieved = await searchDocuments(question);
         const hasContent = retrieved.contextText.trim().length > 0;
-        // Accept results even below the threshold — the threshold now only triggers a
-        // rewrite attempt, but we still use whatever was found rather than going empty.
         const hit = hasContent;
         rows = [];
         contextText = hit ? retrieved.contextText : "";
         citations = hit ? retrieved.citations : [];
         status = hit ? "ok" : "empty";
-        // Only flag as low-confidence (triggers rewrite) when score is truly below threshold
-        if (hasContent && retrieved.topScore < DOCUMENT_HIT_SCORE) {
-          errorMessage = `low_confidence:${retrieved.topScore.toFixed(3)}`;
-        } else {
-          errorMessage = "";
+        errorMessage = "";
+        // Surface degraded mode as a status hint (no rewrite needed — we have content)
+        if (retrieved.degraded) {
+          runtime.writer({
+            type: "status",
+            message: retrieved.degraded === "bm25_only"
+              ? "Keyword search only (Voyage rate limit — add payment at dashboard.voyageai.com to unlock full AI search)"
+              : "Using keyword ranking (reranker unavailable)",
+          });
         }
         runtime.writer({ type: "attempt", question, score: retrieved.topScore, rewriteCount });
       }
@@ -387,13 +389,9 @@ Use ILIKE for names. is_running is boolean. Questions about when a job shipped m
 }
 
 async function searchDocuments(query: string) {
-  try {
-    return await runRAGPipeline(query);
-  } catch (err) {
-    if (!isRateLimit(err)) throw err;
-    await new Promise((resolve) => setTimeout(resolve, 21000));
-    return runRAGPipeline(query);
-  }
+  // Pipeline handles its own degradation tiers internally (Voyage rate-limit → BM25 fallback)
+  // so we just call it directly; a top-level error here is a true failure.
+  return runRAGPipeline(query);
 }
 
 async function rewriteQuestion(question: string, intent: AskTask["intent"], errorMessage: string): Promise<string> {

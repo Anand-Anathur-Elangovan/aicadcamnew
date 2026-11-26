@@ -102,6 +102,11 @@ export interface RAGPipelineOptions {
  * 4. Reranking (Voyage or local BGE-Reranker)
  * 5. MMR-based diversity selection
  */
+function isVoyageRateLimit(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /rate limit|reduced rate limits|payment method|3 RPM|10K TPM/i.test(msg);
+}
+
 export async function runRAGPipeline(
   query: string,
   options: RAGPipelineOptions = {},
@@ -111,57 +116,100 @@ export async function runRAGPipeline(
   contextText: string;
   topScore: number;
   expandedQueries: string[];
+  degraded?: "bm25_only" | "bm25_no_rerank";   // set when falling back
 }> {
   const embeddingProvider = createEmbeddingProvider();
   const rerankProvider    = createRerankProvider();
   const vectorProvider    = createVectorProvider();
 
-  // Step 1: Expand the query
+  // Step 1: Expand the query (best-effort; falls back silently)
   const queries = await expandQuery(query);
 
-  // Step 2: Parallel hybrid search for each variant
-  const perQueryChunks = await Promise.all(
-    queries.map(async (q) => {
-      const embedding = await embeddingProvider.embed(q);
-      return vectorProvider.hybridSearch({
-        queryEmbedding:    embedding,
-        queryText:         q,
-        limit:             MAX_RETRIEVED,
-        filterCategory:    options.filterCategory,
-        filterPartNumber:  options.filterPartNumber,
-      });
-    }),
-  );
+  // ── Step 2: Hybrid search (BM25 + dense vector) ──────────────────────────
+  // Tier 1: embed each query variant + hybrid_search RPC
+  // Tier 2: if any embedding call fails → BM25-only for all queries
+  let rawChunks: RetrievedChunk[] = [];
+  let degraded: "bm25_only" | "bm25_no_rerank" | undefined;
 
-  // Step 3: Merge & deduplicate by chunkId; keep best RRF score per chunk
-  const chunkMap = new Map<string, RetrievedChunk>();
-  for (const batch of perQueryChunks) {
-    for (const chunk of batch) {
-      const existing = chunkMap.get(chunk.chunkId);
-      if (!existing || (chunk.rrfScore ?? 0) > (existing.rrfScore ?? 0)) {
-        chunkMap.set(chunk.chunkId, chunk);
+  try {
+    const perQueryChunks = await Promise.all(
+      queries.map(async (q) => {
+        const embedding = await embeddingProvider.embed(q);
+        return vectorProvider.hybridSearch({
+          queryEmbedding:    embedding,
+          queryText:         q,
+          limit:             MAX_RETRIEVED,
+          filterCategory:    options.filterCategory,
+          filterPartNumber:  options.filterPartNumber,
+        });
+      }),
+    );
+    const chunkMap = new Map<string, RetrievedChunk>();
+    for (const batch of perQueryChunks) {
+      for (const chunk of batch) {
+        const existing = chunkMap.get(chunk.chunkId);
+        if (!existing || (chunk.rrfScore ?? 0) > (existing.rrfScore ?? 0)) {
+          chunkMap.set(chunk.chunkId, chunk);
+        }
       }
+    }
+    rawChunks = [...chunkMap.values()].sort((a, b) => (b.rrfScore ?? 0) - (a.rrfScore ?? 0));
+  } catch (embedErr) {
+    // ── Tier 2: Voyage embedding unavailable → BM25-only ──────────────────
+    if (isVoyageRateLimit(embedErr)) {
+      console.warn("[RAG] Voyage embedding rate-limited — falling back to BM25-only search");
+    } else {
+      console.warn("[RAG] Embedding failed, falling back to BM25:", embedErr);
+    }
+    degraded = "bm25_only";
+    try {
+      const bm25Results = await vectorProvider.bm25Search({
+        queryText:        query,
+        limit:            MAX_RETRIEVED,
+        filterCategory:   options.filterCategory,
+        filterPartNumber: options.filterPartNumber,
+      });
+      rawChunks = bm25Results;
+    } catch (bm25Err) {
+      console.warn("[RAG] BM25 search also failed:", bm25Err);
+      return { chunks: [], citations: [], contextText: "", topScore: 0, expandedQueries: queries, degraded };
     }
   }
 
-  const rawChunks = [...chunkMap.values()].sort((a, b) => (b.rrfScore ?? 0) - (a.rrfScore ?? 0));
-
   if (rawChunks.length === 0) {
-    return { chunks: [], citations: [], contextText: "", topScore: 0, expandedQueries: queries };
+    return { chunks: [], citations: [], contextText: "", topScore: 0, expandedQueries: queries, degraded };
   }
 
-  // Step 4: Rerank against the original query
-  const rerankScores = await rerankProvider.rerank(
-    query,
-    rawChunks.map((c) => c.content),
-  );
+  // ── Step 3 (merge already done above in Tier 1) ───────────────────────────
 
-  const afterRerank = rerankScores
-    .sort((a, b) => b.score - a.score)
-    .slice(0, (options.topK ?? RERANK_TOP_K) * 2)     // keep 2× for MMR to work from
-    .map(({ index, score }) => ({ ...rawChunks[index], rerankScore: score }));
+  // ── Step 4: Rerank ────────────────────────────────────────────────────────
+  // Tier 2 (already on BM25): try rerank; if Voyage still rate-limited, skip it
+  // Tier 3: skip rerank entirely, use RRF score as relevance proxy
+  let afterRerank: (RetrievedChunk & { rerankScore: number })[] = [];
 
-  // Step 5: MMR diversity selection
+  try {
+    const rerankScores = await rerankProvider.rerank(
+      query,
+      rawChunks.map((c) => c.content),
+    );
+    afterRerank = rerankScores
+      .sort((a, b) => b.score - a.score)
+      .slice(0, (options.topK ?? RERANK_TOP_K) * 2)
+      .map(({ index, score }) => ({ ...rawChunks[index], rerankScore: score }));
+  } catch (rerankErr) {
+    // ── Tier 3: no rerank — use RRF score directly ─────────────────────────
+    if (isVoyageRateLimit(rerankErr)) {
+      console.warn("[RAG] Voyage rerank rate-limited — skipping rerank, using RRF order");
+    } else {
+      console.warn("[RAG] Rerank failed, using RRF order:", rerankErr);
+    }
+    degraded = "bm25_no_rerank";
+    afterRerank = rawChunks
+      .slice(0, (options.topK ?? RERANK_TOP_K) * 2)
+      .map((chunk) => ({ ...chunk, rerankScore: chunk.rrfScore ?? 0.5 }));
+  }
+
+  // ── Step 5: MMR diversity selection ──────────────────────────────────────
   const reranked = applyMMR(afterRerank, options.topK ?? RERANK_TOP_K, MMR_LAMBDA);
 
   // Build citations
@@ -195,7 +243,7 @@ export async function runRAGPipeline(
     .join("\n\n---\n\n");
 
   const topScore = reranked[0]?.rerankScore ?? 0;
-  return { chunks: reranked, citations, contextText, topScore, expandedQueries: queries };
+  return { chunks: reranked, citations, contextText, topScore, expandedQueries: queries, degraded };
 }
 
 export function buildSystemPrompt(contextText: string): string {
