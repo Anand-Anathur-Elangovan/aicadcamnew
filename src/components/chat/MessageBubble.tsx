@@ -1,10 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ChatMessage } from "@/lib/types";
 import { CitationCard } from "./CitationCard";
-import { Bot, Loader2, User } from "lucide-react";
+import { Bot, Loader2, User, ThumbsUp, ThumbsDown, Check } from "lucide-react";
 import { dedupeCitations } from "@/lib/chat/evidence";
 import { cn } from "@/lib/utils";
 
@@ -13,13 +14,42 @@ interface MessageBubbleProps {
   isStreaming?: boolean;
   /** What the assistant is doing while it has not started writing yet. */
   status?: string;
+  /** The user question that preceded this answer (for feedback storage). */
+  question?: string;
+  sessionId?: string | null;
 }
 
-export function MessageBubble({ message, isStreaming, status }: MessageBubbleProps) {
+export function MessageBubble({ message, isStreaming, status, question, sessionId }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const waiting = !isUser && Boolean(isStreaming) && message.content.length === 0;
-  // Older saved answers may list the same page twice, so show each source once.
   const sources = dedupeCitations(message.citations ?? []);
+
+  const [voted, setVoted] = useState<1 | -1 | null>(null);
+  const [voting, setVoting] = useState(false);
+
+  const submitFeedback = async (rating: 1 | -1) => {
+    if (voted !== null || voting || !message.content || isStreaming) return;
+    setVoting(true);
+    try {
+      await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: sessionId ?? null,
+          messageId: message.id,
+          question: question ?? "",
+          answer: message.content,
+          citations: message.citations ?? [],
+          rating,
+        }),
+      });
+      setVoted(rating);
+    } catch {
+      // silent — feedback is non-critical
+    } finally {
+      setVoting(false);
+    }
+  };
 
   return (
     <div className={cn("flex gap-3 group", isUser ? "flex-row-reverse" : "flex-row")}>
@@ -111,10 +141,48 @@ export function MessageBubble({ message, isStreaming, status }: MessageBubblePro
           </div>
         )}
 
-        {/* Timestamp */}
-        <p className="text-xs text-gray-400 px-1">
-          {new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-        </p>
+        {/* Feedback row — only on completed assistant messages */}
+        {!isUser && !isStreaming && message.content.length > 0 && (
+          <div className="flex items-center gap-3 px-1">
+            <span className="text-xs text-gray-400">
+              {new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            </span>
+            {voted !== null ? (
+              <span className="flex items-center gap-1 text-xs text-green-600">
+                <Check className="h-3 w-3" /> Thanks for the feedback
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-xs text-gray-400 mr-1">Was this helpful?</span>
+                <button
+                  type="button"
+                  aria-label="Thumbs up"
+                  disabled={voting}
+                  onClick={() => void submitFeedback(1)}
+                  className="p-1 rounded hover:bg-green-50 text-gray-400 hover:text-green-600 transition-colors disabled:opacity-50"
+                >
+                  <ThumbsUp className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Thumbs down"
+                  disabled={voting}
+                  onClick={() => void submitFeedback(-1)}
+                  className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50"
+                >
+                  <ThumbsDown className="h-3.5 w-3.5" />
+                </button>
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Timestamp on user messages only */}
+        {isUser && (
+          <p className="text-xs text-gray-400 px-1">
+            {new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+          </p>
+        )}
       </div>
     </div>
   );

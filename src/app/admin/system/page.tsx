@@ -12,6 +12,8 @@ export default function SystemPage() {
         <Link href="/admin/ingestion" className="text-slate-400 hover:text-slate-200 text-xs">Ingestion</Link>
         <span className="text-slate-600">|</span>
         <Link href="/admin/audit" className="text-slate-400 hover:text-slate-200 text-xs">Audit Trail</Link>
+        <span className="text-slate-600">|</span>
+        <Link href="/admin/training" className="text-slate-400 hover:text-slate-200 text-xs">Training</Link>
       </header>
 
       <div className="max-w-screen-xl mx-auto px-6 py-6 space-y-6">
@@ -46,6 +48,7 @@ export default function SystemPage() {
             { label: "Audit Trail",    href: "/admin/audit",     color: "border-red-800 hover:bg-red-950/30" },
             { label: "CAPP Studio",    href: "/studio",          color: "border-cyan-800 hover:bg-cyan-950/30" },
             { label: "Document Ingest",href: "/admin/ingestion", color: "border-purple-800 hover:bg-purple-950/30" },
+            { label: "Training & Feedback", href: "/admin/training", color: "border-green-800 hover:bg-green-950/30" },
             { label: "AI Chat",        href: "/chat",            color: "border-blue-800 hover:bg-blue-950/30" },
           ].map((l) => (
             <Link key={l.label} href={l.href}

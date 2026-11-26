@@ -335,6 +335,12 @@ export function ChatInterface() {
                   message={msg}
                   isStreaming={isStreaming && i === messages.length - 1 && msg.role === "assistant"}
                   status={status}
+                  sessionId={sessionId}
+                  question={
+                    msg.role === "assistant" && i > 0
+                      ? messages.slice(0, i).reverse().find((m) => m.role === "user")?.content
+                      : undefined
+                  }
                 />
               ))}
             </div>
