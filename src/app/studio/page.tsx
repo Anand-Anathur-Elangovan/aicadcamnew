@@ -26,6 +26,7 @@ import PackSheetView from "@/components/studio/PackSheet";
 import StudioHeader from "@/components/studio/StudioHeader";
 import RoutingPanel, { type PanelTab } from "@/components/studio/RoutingPanel";
 import DiffViewerModal from "@/components/studio/DiffViewerModal";
+import { GCodeHistory } from "@/components/studio/GCodeHistory";
 
 // Dynamic imports to avoid SSR issues with Three.js + Monaco + pdfjs
 const MechSimPanel = dynamic(() => import("@/components/studio/MechSimPanel"), { ssr: false });
@@ -497,6 +498,17 @@ export default function StudioPage() {
               </ul>
             )}
           </div>
+          {/* G-code revision history */}
+          {gcode.trim() && (
+            <div className="shrink-0 px-3 py-2 border-t border-slate-700 bg-slate-950">
+              <GCodeHistory
+                programName={stagePlan ? `OP${stagePlan.stages[stageIndex]?.opNumber ?? 10}` : "program"}
+                currentCode={gcode}
+                onRestore={(code) => { setGcode(code); }}
+              />
+            </div>
+          )}
+
           {/* Approve & Train button — appears after AI generates G-code */}
           {generatedGcodeSnapshot && (
             <div className="shrink-0 px-3 py-2 border-t border-slate-700 bg-slate-900">
