@@ -11,6 +11,7 @@ import {
   ClipboardList,
   AlertTriangle,
   TrendingUp,
+  Search,
 } from "lucide-react";
 import { LiveStats } from "@/components/home/LiveStats";
 import { RecentDocuments } from "@/components/home/RecentDocuments";
@@ -75,6 +76,13 @@ export default function Home() {
             >
               <Cpu className="h-3.5 w-3.5" />
               <span className="hidden sm:block">Studio</span>
+            </Link>
+            <Link
+              href="/search"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              <Search className="h-3.5 w-3.5" />
+              <span className="hidden sm:block">Search</span>
             </Link>
             <Link
               href="/admin/system"

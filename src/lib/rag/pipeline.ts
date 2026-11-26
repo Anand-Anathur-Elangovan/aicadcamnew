@@ -90,6 +90,8 @@ function applyMMR(
 export interface RAGPipelineOptions {
   filterCategory?:   DocumentCategory;
   filterPartNumber?: string;
+  /** Override how many reranked + MMR chunks to return (default: RERANK_TOP_K) */
+  topK?: number;
 }
 
 /**
@@ -156,11 +158,11 @@ export async function runRAGPipeline(
 
   const afterRerank = rerankScores
     .sort((a, b) => b.score - a.score)
-    .slice(0, RERANK_TOP_K * 2)                       // keep 2× for MMR to work from
+    .slice(0, (options.topK ?? RERANK_TOP_K) * 2)     // keep 2× for MMR to work from
     .map(({ index, score }) => ({ ...rawChunks[index], rerankScore: score }));
 
   // Step 5: MMR diversity selection
-  const reranked = applyMMR(afterRerank, RERANK_TOP_K, MMR_LAMBDA);
+  const reranked = applyMMR(afterRerank, options.topK ?? RERANK_TOP_K, MMR_LAMBDA);
 
   // Build citations
   const documentIds = [...new Set(reranked.map((c) => c.documentId))];
