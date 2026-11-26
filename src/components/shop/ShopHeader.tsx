@@ -10,9 +10,8 @@ export function ShopHeader({ title }: { title: string }) {
         <span className="text-gray-300">/</span>
         <h1 className="text-sm font-semibold text-gray-900">{title}</h1>
         <div className="flex-1" />
-        <Link href="/shop/anomalies" className="text-xs font-medium text-gray-700 hover:text-gray-900 mr-3">
-          Anomalies
-        </Link>
+        <Link href="/shop/kpi"        className="text-xs font-medium text-gray-700 hover:text-gray-900 mr-3">KPI</Link>
+        <Link href="/shop/anomalies" className="text-xs font-medium text-gray-700 hover:text-gray-900 mr-3">Anomalies</Link>
         <Link
           href="/chat"
           className="text-xs font-medium text-blue-700 hover:text-blue-900"

@@ -10,6 +10,7 @@ import {
   Settings,
   ClipboardList,
   AlertTriangle,
+  TrendingUp,
 } from "lucide-react";
 import { LiveStats } from "@/components/home/LiveStats";
 import { RecentDocuments } from "@/components/home/RecentDocuments";
@@ -59,6 +60,13 @@ export default function Home() {
             >
               <AlertTriangle className="h-3.5 w-3.5" />
               <span className="hidden sm:block">Anomalies</span>
+            </Link>
+            <Link
+              href="/shop/kpi"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              <TrendingUp className="h-3.5 w-3.5" />
+              <span className="hidden sm:block">KPI</span>
             </Link>
             <Link
               href="/studio"
