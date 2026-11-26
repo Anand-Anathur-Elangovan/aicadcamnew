@@ -49,6 +49,7 @@ export default function SystemPage() {
             { label: "CAPP Studio",    href: "/studio",          color: "border-cyan-800 hover:bg-cyan-950/30" },
             { label: "Document Ingest",href: "/admin/ingestion", color: "border-purple-800 hover:bg-purple-950/30" },
             { label: "Training & Feedback", href: "/admin/training", color: "border-green-800 hover:bg-green-950/30" },
+            { label: "Alert Settings",      href: "/admin/alerts",   color: "border-yellow-800 hover:bg-yellow-950/30" },
             { label: "AI Chat",        href: "/chat",            color: "border-blue-800 hover:bg-blue-950/30" },
           ].map((l) => (
             <Link key={l.label} href={l.href}
