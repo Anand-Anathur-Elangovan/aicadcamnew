@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { LiveStats } from "@/components/home/LiveStats";
 import { RecentDocuments } from "@/components/home/RecentDocuments";
+import { DemoSeedBanner } from "@/components/home/DemoSeedBanner";
 
 export const metadata = { title: "Manufacturing AI Intelligence" };
 
@@ -138,6 +139,9 @@ export default function Home() {
 
       {/* ── Main Content ─────────────────────────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+
+        {/* Demo seed banner — shown when library is empty */}
+        <DemoSeedBanner />
 
         {/* Live Stats */}
         <LiveStats />
