@@ -25,7 +25,7 @@ export function DemoSeedBanner() {
     // Quick doc count check
     fetch("/api/ingest")
       .then((r) => r.json())
-      .then((d: { documents?: { length?: number } }) => setDocCount((d.documents ?? []).length))
+      .then((d: { documents?: unknown[] }) => setDocCount((d.documents ?? []).length))
       .catch(() => setDocCount(0));
   }, []);
 

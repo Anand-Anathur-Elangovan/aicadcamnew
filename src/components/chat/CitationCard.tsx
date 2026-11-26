@@ -1,10 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Download, ExternalLink, FileText, ChevronDown } from "lucide-react";
+import dynamic from "next/dynamic";
+import { Download, ExternalLink, FileText, ChevronDown, Eye } from "lucide-react";
 import type { Citation } from "@/lib/types";
 import { CATEGORY_LABELS, CATEGORY_COLORS } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+
+const DrawingOverlay = dynamic(
+  () => import("./DrawingOverlay").then((m) => ({ default: m.DrawingOverlay })),
+  { ssr: false }
+);
 
 interface CitationCardProps {
   citation: Citation;
@@ -12,6 +18,12 @@ interface CitationCardProps {
 
 export function CitationCard({ citation }: CitationCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const [overlayOpen, setOverlayOpen] = useState(false);
+
+  // Show drawing overlay button for PDF drawings
+  const isDrawing =
+    citation.category === "DRAWING_2D" ||
+    citation.downloadUrl?.toLowerCase().endsWith(".pdf");
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
@@ -54,7 +66,17 @@ export function CitationCard({ citation }: CitationCardProps) {
             &ldquo;{citation.snippet}&rdquo;
           </p>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {isDrawing && (
+              <button
+                type="button"
+                onClick={() => setOverlayOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-500 text-white text-xs font-medium hover:bg-amber-600 transition-colors"
+              >
+                <Eye className="h-3.5 w-3.5" />
+                View Drawing
+              </button>
+            )}
             <a
               href={citation.downloadUrl}
               download
@@ -73,6 +95,11 @@ export function CitationCard({ citation }: CitationCardProps) {
               View Page
             </a>
           </div>
+
+          {/* Drawing overlay */}
+          {overlayOpen && (
+            <DrawingOverlay citation={citation} onClose={() => setOverlayOpen(false)} />
+          )}
         </div>
       )}
     </div>
