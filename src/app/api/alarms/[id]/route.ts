@@ -7,11 +7,12 @@ export const runtime = "nodejs";
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = (await req.json()) as { acknowledged_by?: string };
-    await acknowledgeAlarm(params.id, body.acknowledged_by ?? "operator");
+    await acknowledgeAlarm(id, body.acknowledged_by ?? "operator");
     return Response.json({ success: true });
   } catch (err) {
     return Response.json({ error: String(err) }, { status: 500 });
