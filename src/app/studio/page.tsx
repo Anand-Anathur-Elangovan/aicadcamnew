@@ -27,6 +27,7 @@ import StudioHeader from "@/components/studio/StudioHeader";
 import RoutingPanel, { type PanelTab } from "@/components/studio/RoutingPanel";
 import DiffViewerModal from "@/components/studio/DiffViewerModal";
 import { GCodeHistory } from "@/components/studio/GCodeHistory";
+import { DncCertBadge } from "@/components/studio/DncCertBadge";
 
 // Dynamic imports to avoid SSR issues with Three.js + Monaco + pdfjs
 const MechSimPanel = dynamic(() => import("@/components/studio/MechSimPanel"), { ssr: false });
@@ -498,6 +499,16 @@ export default function StudioPage() {
               </ul>
             )}
           </div>
+          {/* DNC certification badge */}
+          {gcode.trim() && (
+            <div className="shrink-0 px-3 py-2 border-t border-slate-700 bg-slate-900 flex items-center gap-2">
+              <span className="text-xs text-slate-400 shrink-0">DNC:</span>
+              <DncCertBadge
+                programName={stagePlan ? `OP${stagePlan.stages[stageIndex]?.opNumber ?? 10}` : "program"}
+              />
+            </div>
+          )}
+
           {/* G-code revision history */}
           {gcode.trim() && (
             <div className="shrink-0 px-3 py-2 border-t border-slate-700 bg-slate-950">
