@@ -16,9 +16,15 @@ export async function POST(req: NextRequest) {
       plan: ProcessPlan;
       features: PartFeatures;
       targetMachine?: string;
+      tools?: string[];
     };
 
-    const { plan, features, targetMachine = "Fanuc 3-Axis VMC" } = body;
+    const { plan, features, targetMachine = "Fanuc 3-Axis VMC", tools = [] } = body;
+
+    // Build enriched machine context for the AI
+    const machineContext = tools.length
+      ? `${targetMachine}. Available tools: ${tools.join(", ")}.`
+      : targetMachine;
 
     if (!plan || !features) {
       return Response.json({ error: "Both 'plan' and 'features' are required" }, { status: 400 });
@@ -37,7 +43,7 @@ export async function POST(req: NextRequest) {
           const capp = createCAPPProvider();
 
           send({ step: "Generating G-code program", progress: 30 });
-          const gcode = await capp.generateGCode(plan, features, targetMachine);
+          const gcode = await capp.generateGCode(plan, features, machineContext);
 
           send({ step: "Post-processing output", progress: 90 });
 

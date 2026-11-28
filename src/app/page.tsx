@@ -94,6 +94,13 @@ export default function Home() {
               <span className="hidden sm:block">Alarms</span>
             </Link>
             <Link
+              href="/playground"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              <Zap className="h-3.5 w-3.5" />
+              <span className="hidden sm:block">Playground</span>
+            </Link>
+            <Link
               href="/admin/playground"
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
             >
@@ -239,9 +246,9 @@ export default function Home() {
         {/* Admin Quick Links */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
+            { href: "/playground",         icon: Zap,           label: "CNC Playground", sub: "Virtual dry-run",           color: "text-cyan-600",   bg: "bg-cyan-50",   hover: "hover:border-cyan-300" },
             { href: "/admin/playground", icon: FlaskConical, label: "AI Training", sub: "Conversations · Fine-tune", color: "text-violet-600", bg: "bg-violet-50", hover: "hover:border-violet-300" },
             { href: "/search",           icon: Search,        label: "Feature Search", sub: "Find by tolerance/thread", color: "text-blue-600",   bg: "bg-blue-50",   hover: "hover:border-blue-300" },
-            { href: "/shop/anomalies",   icon: AlertTriangle, label: "Anomalies",    sub: "Shop floor alerts",        color: "text-red-600",    bg: "bg-red-50",    hover: "hover:border-red-300" },
             { href: "/alarms",           icon: Bell,          label: "Alarm Log",    sub: "NCK / CNC alarms",         color: "text-amber-600",  bg: "bg-amber-50",  hover: "hover:border-amber-300" },
           ].map((item) => (
             <Link key={item.href} href={item.href}

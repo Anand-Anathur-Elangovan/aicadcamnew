@@ -34,6 +34,7 @@ export default function RoutingPanel({ onPlanGenerated, onGCodeGenerated, onFile
   const [plan, setPlan]               = useState<ProcessPlan | null>(null);
   const [features, setFeatures]       = useState<PartFeatures | null>(null);
   const [targetMachine, setTargetMachine] = useState("Fanuc 3-Axis VMC");
+  const [selectedTools, setSelectedTools] = useState<string[]>([]); // tool descriptions chosen by user
   const [stagePlan, setStagePlan] = useState<StagePlan | null>(null);
   const [error, setError]             = useState<string | null>(null);
   const [progress, setProgress]       = useState("");
@@ -125,7 +126,7 @@ export default function RoutingPanel({ onPlanGenerated, onGCodeGenerated, onFile
       const res = await fetch("/api/gcode/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, features, targetMachine }),
+        body: JSON.stringify({ plan, features, targetMachine, tools: selectedTools }),
       });
       if (!res.ok) throw new Error(await res.text());
 
@@ -155,7 +156,7 @@ export default function RoutingPanel({ onPlanGenerated, onGCodeGenerated, onFile
     } finally {
       setIsGcoding(false);
     }
-  }, [plan, features, targetMachine, onGCodeGenerated]);
+  }, [plan, features, targetMachine, selectedTools, onGCodeGenerated]);
 
   const tabs: { id: PanelTab; label: string }[] = [
     { id: "upload", label: "Upload" },
@@ -240,20 +241,12 @@ export default function RoutingPanel({ onPlanGenerated, onGCodeGenerated, onFile
               40 x 40 x 80 mm bar, turned to Ø32 and bored Ø16.
             </p>
 
-            <div className="space-y-1">
-              <label className="text-xs text-slate-400">Target Machine</label>
-              <select
-                className="w-full text-xs bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-slate-200"
-                value={targetMachine}
-                onChange={(e) => setTargetMachine(e.target.value)}
-              >
-                <option>Fanuc 3-Axis VMC</option>
-                <option>Haas VF-2</option>
-                <option>Fanuc 5-Axis VMC</option>
-                <option>CNC Lathe (Fanuc)</option>
-                <option>CNC Lathe (Haas)</option>
-              </select>
-            </div>
+            <MachinePicker
+              targetMachine={targetMachine}
+              setTargetMachine={setTargetMachine}
+              selectedTools={selectedTools}
+              setSelectedTools={setSelectedTools}
+            />
           </div>
         )}
 
@@ -478,5 +471,108 @@ function Badge({ children, color }: { children: React.ReactNode; color: "cyan" |
     <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] border ${cls}`}>
       {children}
     </span>
+  );
+}
+
+// ─── Machine + Tool picker (fetches from /api/machines and /api/tools) ───────
+interface DbMachine { id: string; machine_id: string; name: string; kind: string; controller: string; }
+interface DbTool    { id: string; tool_no: string; description: string; kind: string; diameter_mm: number|null; }
+
+function MachinePicker({
+  targetMachine, setTargetMachine, selectedTools, setSelectedTools,
+}: {
+  targetMachine: string;
+  setTargetMachine: (v: string) => void;
+  selectedTools: string[];
+  setSelectedTools: (v: string[]) => void;
+}) {
+  const [machines, setMachines] = useState<DbMachine[]>([]);
+  const [tools, setTools] = useState<DbTool[]>([]);
+  const [showTools, setShowTools] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/machines").then(r => r.json()).then((d: DbMachine[]) => {
+      setMachines(d ?? []);
+      if (d?.length && targetMachine === "Fanuc 3-Axis VMC") {
+        setTargetMachine(`${d[0].machine_id} – ${d[0].name}`);
+      }
+    }).catch(() => {});
+    fetch("/api/tools").then(r => r.json()).then((d: DbTool[]) => setTools(d ?? [])).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const toggleTool = (desc: string) => {
+    setSelectedTools(
+      selectedTools.includes(desc)
+        ? selectedTools.filter(t => t !== desc)
+        : [...selectedTools, desc]
+    );
+  };
+
+  return (
+    <div className="space-y-2">
+      <label className="text-xs text-slate-400">Machine</label>
+      {machines.length > 0 ? (
+        <select
+          className="w-full text-xs bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-slate-200"
+          value={targetMachine}
+          onChange={e => setTargetMachine(e.target.value)}
+        >
+          {machines.map(m => (
+            <option key={m.id} value={`${m.machine_id} – ${m.name}`}>
+              {m.machine_id} – {m.name} ({m.kind.toUpperCase()}, {m.controller})
+            </option>
+          ))}
+          <option value="Fanuc 3-Axis VMC">Fanuc 3-Axis VMC (generic)</option>
+          <option value="Fanuc 5-Axis VMC">Fanuc 5-Axis VMC (generic)</option>
+          <option value="CNC Lathe (Fanuc)">CNC Lathe – Fanuc (generic)</option>
+        </select>
+      ) : (
+        <select
+          className="w-full text-xs bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-slate-200"
+          value={targetMachine}
+          onChange={e => setTargetMachine(e.target.value)}
+        >
+          <option>Fanuc 3-Axis VMC</option>
+          <option>Haas VF-2</option>
+          <option>Fanuc 5-Axis VMC</option>
+          <option>CNC Lathe (Fanuc)</option>
+          <option>CNC Lathe (Haas)</option>
+        </select>
+      )}
+
+      {/* Tool selection */}
+      {tools.length > 0 && (
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowTools(v => !v)}
+            className="text-xs text-cyan-400 hover:text-cyan-300 mt-1"
+          >
+            {showTools ? "▾ Hide tool list" : "▸ Select tools"}{selectedTools.length > 0 ? ` (${selectedTools.length} selected)` : ""}
+          </button>
+          {showTools && (
+            <div className="mt-2 max-h-48 overflow-y-auto space-y-1 bg-slate-800 rounded p-2">
+              {tools.map(t => {
+                const on = selectedTools.includes(t.description);
+                return (
+                  <label key={t.id} className={`flex items-center gap-2 text-xs cursor-pointer rounded px-2 py-1 ${on ? "bg-cyan-900/40 text-cyan-200" : "text-slate-300 hover:bg-slate-700"}`}>
+                    <input type="checkbox" checked={on} onChange={() => toggleTool(t.description)} className="accent-cyan-500" />
+                    <span className="font-mono text-cyan-500 w-8 shrink-0">{t.tool_no}</span>
+                    <span>{t.description}</span>
+                    {t.diameter_mm && <span className="text-slate-500 ml-auto">Ø{t.diameter_mm}</span>}
+                  </label>
+                );
+              })}
+            </div>
+          )}
+          {selectedTools.length > 0 && (
+            <p className="text-[10px] text-slate-500 mt-1">
+              AI will use only these tools when generating G-code
+            </p>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
