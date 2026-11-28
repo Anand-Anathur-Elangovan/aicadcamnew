@@ -31,35 +31,37 @@ interface StockTemplate {
 const TEMPLATES: StockTemplate[] = [
   {
     id: "rod",
-    label: "Round Rod",
-    desc: "Ø50 × 100 mm bar stock — typical turning/boring job",
+    label: "Round Rod (CNC Lathe)",
+    desc: "Ø50 × 80 mm bar in 3-jaw chuck — OD turning & facing",
     icon: "🔵",
-    dims: "50×50×100",
+    dims: "Ø50×80",
     gcode: `%
-O0001 (ROUND ROD - Ø50x100)
-(Machine: VMC-01  Tool: T01 Ø12 Endmill)
-G21 G17 G40 G49 G80 G90
+O0001 (ROUND ROD - CNC LATHE OD TURNING)
+(Machine: LTH-01  Tool: T0101 OD Turning Insert)
+G21 G18 G40 G99
 
-T01 M06 (Ø12 Endmill)
-G43 H01 Z50.
-S3000 M03
+T0101 (OD ROUGHING INSERT)
+G97 S1200 M03
+G00 X54. Z2.
 
-(--- Face top ---) 
-G00 X-30. Y0.
-Z5.
-G01 Z0. F200.
-G01 X30. F500.
-G00 Z5.
+(--- Face end ---)
+G01 Z0. F0.2
+G01 X-1. F0.15
+G00 Z2.
 
-(--- Rough pocket Ø32 ---) 
-G00 X0. Y0.
-Z2.
-G01 Z-10. F150.
-G41 D01
-G01 X16. F300.
-G02 X16. Y0. I-16. J0. (Full circle)
-G40
-G00 Z50.
+(--- OD Turn Ø50 -> Ø36 along Z-50 ---)
+G00 X46. Z2.
+G01 Z-50. F0.25
+G00 X48. Z2.
+G00 X42.
+G01 Z-50. F0.25
+G00 X44. Z2.
+G00 X38.
+G01 Z-50. F0.2
+G00 X40. Z2.
+G00 X36.
+G01 Z-50. F0.15
+G00 X54. Z20.
 
 M05
 M30
@@ -462,6 +464,7 @@ export default function PlaygroundPage() {
                 key={simKey}
                 job={simJob}
                 isPlaying={isPlaying}
+                machine={selMachine?.kind}
                 onLine={setHighlightLine}
                 onPlayEnd={() => setIsPlaying(false)}
                 onCollision={() => { setIsPlaying(false); }}
