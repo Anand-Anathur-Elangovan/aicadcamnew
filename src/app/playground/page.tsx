@@ -5,7 +5,7 @@
 // Write / paste G-code → click Play → 3D animation runs in browser
 // Zero risk: no machine touches, fully virtual
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import { Play, Pause, RotateCcw, Download, Wrench, Cpu, ChevronDown, ChevronUp, Upload, Zap } from "lucide-react";
 import { parseGCode } from "@/lib/gcode/parser";
@@ -186,20 +186,21 @@ export default function PlaygroundPage() {
   const [showToolPicker, setShowToolPicker] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [genProgress, setGenProgress] = useState("");
+  const [simKey, setSimKey] = useState(0);
 
   const gcodeRef = useRef(gcode);
   useEffect(() => { gcodeRef.current = gcode; }, [gcode]);
 
   useEffect(() => {
     fetch("/api/machines").then(r => r.json()).then((d: DbMachine[]) => {
-      const list = d ?? [];
+      const list = Array.isArray(d) ? d : [];
       setMachines(list);
       if (list.length) setSelMachine(list[0]);
     }).catch(() => {});
     fetch("/api/tools").then(r => r.json()).then((d: DbTool[]) => {
-      setTools(d ?? []);
-      // pre-select first 3 tools
-      setSelTools((d ?? []).slice(0, 3));
+      const list = Array.isArray(d) ? d : [];
+      setTools(list);
+      setSelTools(list.slice(0, 3));
     }).catch(() => {});
   }, []);
 
@@ -215,14 +216,16 @@ export default function PlaygroundPage() {
     );
   };
 
-  // Parse current gcode for simulation
-  const simJob = (() => {
+  // Rebuild the 3D job only when G-code text changes — not on play/pause.
+  const simJob = useMemo(() => {
     if (!gcode.trim()) return null;
     try {
       const setup = inferSetup(gcode);
       return prepareSim(gcode, setup);
-    } catch { return null; }
-  })();
+    } catch {
+      return null;
+    }
+  }, [gcode]);
 
   // Auto-generate G-code from template + machine + tools using AI
   const autoGenerate = useCallback(async () => {
@@ -407,7 +410,7 @@ export default function PlaygroundPage() {
               {isPlaying ? <><Pause size={13}/> Pause</> : <><Play size={13}/> Play</>}
             </button>
             <button
-              onClick={() => { setIsPlaying(false); setTimeout(() => setIsPlaying(false), 50); }}
+              onClick={() => { setIsPlaying(false); setSimKey(k => k + 1); }}
               className="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-200 px-2 py-1.5 rounded hover:bg-zinc-800"
             >
               <RotateCcw size={13}/> Reset
@@ -440,6 +443,7 @@ export default function PlaygroundPage() {
           <div className="flex-1 relative bg-zinc-900">
             {simJob ? (
               <CutSimViewport
+                key={simKey}
                 job={simJob}
                 isPlaying={isPlaying}
                 onLine={setHighlightLine}
@@ -466,6 +470,7 @@ export default function PlaygroundPage() {
           <div className="flex-1 min-h-0">
             <GCodeMonacoEditor
               value={gcode}
+              onChange={v => { setGcode(v); setIsPlaying(false); }}
               onSave={v => { setGcode(v); setIsPlaying(false); }}
               onLineClick={handleLineClick}
               highlightLine={highlightLine}

@@ -71,8 +71,10 @@ export default function MachinesPage() {
   async function load() {
     setLoading(true);
     const [mr, tr] = await Promise.all([fetch("/api/machines"), fetch("/api/tools")]);
-    setMachines(await mr.json());
-    setTools(await tr.json());
+    const mj = await mr.json();
+    const tj = await tr.json();
+    setMachines(Array.isArray(mj) ? mj : []);
+    setTools(Array.isArray(tj) ? tj : []);
     setLoading(false);
   }
 

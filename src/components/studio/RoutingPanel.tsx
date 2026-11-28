@@ -492,12 +492,13 @@ function MachinePicker({
 
   useEffect(() => {
     fetch("/api/machines").then(r => r.json()).then((d: DbMachine[]) => {
-      setMachines(d ?? []);
-      if (d?.length && targetMachine === "Fanuc 3-Axis VMC") {
-        setTargetMachine(`${d[0].machine_id} – ${d[0].name}`);
+      const list = Array.isArray(d) ? d : [];
+      setMachines(list);
+      if (list.length && targetMachine === "Fanuc 3-Axis VMC") {
+        setTargetMachine(`${list[0].machine_id} – ${list[0].name}`);
       }
     }).catch(() => {});
-    fetch("/api/tools").then(r => r.json()).then((d: DbTool[]) => setTools(d ?? [])).catch(() => {});
+    fetch("/api/tools").then(r => r.json()).then((d: DbTool[]) => setTools(Array.isArray(d) ? d : [])).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

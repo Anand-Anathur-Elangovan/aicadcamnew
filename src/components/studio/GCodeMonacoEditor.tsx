@@ -14,6 +14,7 @@ interface Props {
   moves?: number;
   playing?: boolean;
   onSave?: (value: string) => void;
+  onChange?: (value: string) => void;
   onPlay?: () => void;
   onExport?: (value: string) => void;
   onLineClick?: (lineIndex: number) => void;
@@ -28,6 +29,7 @@ export default function GCodeMonacoEditor({
   moves = 0,
   playing = false,
   onSave,
+  onChange,
   onPlay,
   onExport,
   onLineClick,
@@ -41,8 +43,10 @@ export default function GCodeMonacoEditor({
   const valueRef = useRef(value);
   const applyingRef = useRef(false);
   const onLineClickRef = useRef(onLineClick);
+  const onChangeRef = useRef(onChange);
   valueRef.current = value;
   onLineClickRef.current = onLineClick;
+  onChangeRef.current = onChange;
   const [dirty, setDirty] = useState(false);
   const hasProgram = value.trim().length > 0 || dirty;
 
@@ -70,6 +74,7 @@ export default function GCodeMonacoEditor({
       if (applyingRef.current) return;
       const next = editor.getValue().replace(/\r\n/g, "\n");
       setDirty(next !== valueRef.current.replace(/\r\n/g, "\n"));
+      onChangeRef.current?.(next);
     });
   }, []);
 
