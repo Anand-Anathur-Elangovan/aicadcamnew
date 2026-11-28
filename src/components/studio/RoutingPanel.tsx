@@ -475,7 +475,7 @@ function Badge({ children, color }: { children: React.ReactNode; color: "cyan" |
 }
 
 // ─── Machine + Tool picker (fetches from /api/machines and /api/tools) ───────
-interface DbMachine { id: string; machine_id: string; name: string; kind: string; controller: string; }
+interface DbMachine { id: string; machine_id: string; name: string; display_name?: string; kind: string; controller: string; }
 interface DbTool    { id: string; tool_no: string; description: string; kind: string; diameter_mm: number|null; }
 
 function MachinePicker({
@@ -519,11 +519,16 @@ function MachinePicker({
           value={targetMachine}
           onChange={e => setTargetMachine(e.target.value)}
         >
-          {machines.map(m => (
-            <option key={m.id} value={`${m.machine_id} – ${m.name}`}>
-              {m.machine_id} – {m.name} ({m.kind.toUpperCase()}, {m.controller})
-            </option>
-          ))}
+          {machines.map(m => {
+            const kindLabel: Record<string, string> = { vmc: "VMC", lathe: "CNC Lathe", vmc5: "5-Axis VMC", lathe5: "5-Axis Lathe", grinder: "Grinder", edm: "EDM" };
+            const label = kindLabel[m.kind] ?? m.kind?.toUpperCase() ?? "";
+            const display = m.display_name && m.display_name !== m.machine_id ? m.display_name : m.name;
+            return (
+              <option key={m.id} value={`${m.machine_id} — ${display}`}>
+                {m.machine_id} — {display} ({label}, {m.controller})
+              </option>
+            );
+          })}
           <option value="Fanuc 3-Axis VMC">Fanuc 3-Axis VMC (generic)</option>
           <option value="Fanuc 5-Axis VMC">Fanuc 5-Axis VMC (generic)</option>
           <option value="CNC Lathe (Fanuc)">CNC Lathe – Fanuc (generic)</option>
@@ -534,11 +539,11 @@ function MachinePicker({
           value={targetMachine}
           onChange={e => setTargetMachine(e.target.value)}
         >
-          <option>Fanuc 3-Axis VMC</option>
-          <option>Haas VF-2</option>
-          <option>Fanuc 5-Axis VMC</option>
-          <option>CNC Lathe (Fanuc)</option>
-          <option>CNC Lathe (Haas)</option>
+          <option value="VMC-01 — Fanuc 3-Axis VMC">VMC-01 — Fanuc 3-Axis VMC</option>
+          <option value="VMC-02 — Fanuc 5-Axis VMC">VMC-02 — Fanuc 5-Axis VMC</option>
+          <option value="LTH-01 — CNC Lathe (Fanuc)">LTH-01 — CNC Lathe (Fanuc)</option>
+          <option value="LTH-02 — CNC Lathe (Haas)">LTH-02 — CNC Lathe (Haas)</option>
+          <option value="Haas VF-2">Haas VF-2 (generic)</option>
         </select>
       )}
 

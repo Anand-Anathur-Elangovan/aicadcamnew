@@ -15,7 +15,7 @@ const GCodeMonacoEditor = dynamic(() => import("@/components/studio/GCodeMonacoE
 const CutSimViewport    = dynamic(() => import("@/components/studio/CutSimViewport"),    { ssr: false });
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-interface DbMachine { id: string; machine_id: string; name: string; kind: string; controller: string; max_rpm: number | null; }
+interface DbMachine { id: string; machine_id: string; name: string; display_name?: string; kind: string; controller: string; max_rpm: number | null; }
 interface DbTool    { id: string; tool_no: string; description: string; kind: string; diameter_mm: number | null; }
 
 interface StockTemplate {
@@ -293,25 +293,41 @@ export default function PlaygroundPage() {
             <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1 mb-2">
               <Cpu size={12}/> Machine
             </label>
-            {machines.length > 0 ? (
-              <select
-                className="w-full text-xs bg-zinc-800 border border-zinc-700 rounded px-2 py-1.5 text-zinc-100"
-                value={selMachine?.id ?? ""}
-                onChange={e => setSelMachine(machines.find(m => m.id === e.target.value) ?? null)}
-              >
-                {machines.map(m => (
-                  <option key={m.id} value={m.id}>{m.machine_id} – {m.name}</option>
-                ))}
-              </select>
-            ) : (
-              <select className="w-full text-xs bg-zinc-800 border border-zinc-700 rounded px-2 py-1.5 text-zinc-100">
-                <option>VMC-01 – Fanuc VMC (demo)</option>
-                <option>LTH-01 – Fanuc Lathe (demo)</option>
-              </select>
-            )}
+            <select
+              className="w-full text-xs bg-zinc-800 border border-zinc-700 rounded px-2 py-1.5 text-zinc-100"
+              value={selMachine?.id ?? ""}
+              onChange={e => {
+                const found = machines.find(m => m.id === e.target.value);
+                setSelMachine(found ?? null);
+              }}
+            >
+              {machines.length > 0 ? (
+                machines.map(m => {
+                  const kindLabel: Record<string, string> = { vmc: "VMC", lathe: "CNC Lathe", vmc5: "5-Axis VMC", lathe5: "5-Axis Lathe", grinder: "Grinder", edm: "EDM" };
+                  const label = kindLabel[m.kind] ?? m.kind?.toUpperCase() ?? "Machine";
+                  const display = m.display_name && m.display_name !== m.machine_id ? m.display_name : m.name;
+                  return (
+                    <option key={m.id} value={m.id}>
+                      {m.machine_id} — {display} ({label})
+                    </option>
+                  );
+                })
+              ) : (
+                <>
+                  <option value="vmc01">VMC-01 — 3-Axis VMC, Fanuc</option>
+                  <option value="vmc02">VMC-02 — 5-Axis VMC, Fanuc</option>
+                  <option value="lth01">LTH-01 — CNC Lathe, Fanuc</option>
+                  <option value="lth02">LTH-02 — CNC Lathe, Haas</option>
+                  <option value="generic-vmc">Generic — 3-Axis VMC</option>
+                  <option value="generic-lathe">Generic — CNC Lathe</option>
+                </>
+              )}
+            </select>
             {selMachine && (
-              <p className="text-[10px] text-zinc-600 mt-1">
-                {selMachine.kind.toUpperCase()} · {selMachine.controller} · {selMachine.max_rpm?.toLocaleString() ?? "—"} RPM
+              <p className="text-[10px] text-zinc-500 mt-1">
+                {({ vmc: "Vertical Machining Centre", lathe: "CNC Turning Centre", vmc5: "5-Axis VMC", lathe5: "5-Axis Lathe", grinder: "CNC Grinder", edm: "EDM" } as Record<string, string>)[selMachine.kind] ?? selMachine.kind?.toUpperCase()}
+                {" · "}{selMachine.controller?.toUpperCase()}
+                {selMachine.max_rpm ? ` · ${selMachine.max_rpm.toLocaleString()} RPM` : ""}
               </p>
             )}
           </div>

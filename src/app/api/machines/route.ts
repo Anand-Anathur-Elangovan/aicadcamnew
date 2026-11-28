@@ -5,12 +5,31 @@ function sb() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
+/** Clean display_name — strip non-ASCII garbage from bad Unicode inserts */
+function cleanText(s: string | null | undefined): string {
+  if (!s) return "";
+  // Replace common garbled sequences (e.g. A?12 → Ø12, A?? → –, A?° → °)
+  return s
+    .replace(/A\?\?/g, "–")
+    .replace(/A\?12/g, "Ø12")
+    .replace(/A\?6/g, "Ø6")
+    .replace(/A\?20/g, "Ø20")
+    .replace(/A\?10/g, "Ø10")
+    .replace(/A\?8/g, "Ø8")
+    .replace(/A\?28/g, "Ø28")
+    .replace(/A\?25/g, "Ø25")
+    .replace(/A\?°/g, "°")
+    .replace(/A\?/g, "Ø");
+}
+
 /** Map DNC machines row (name = shop code) to the Studio/Playground shape. */
 function mapMachine(row: Record<string, unknown>) {
+  const displayName = cleanText((row.display_name as string) || (row.name as string));
   return {
     ...row,
-    machine_id: row.name,
-    name: (row.display_name as string) || (row.name as string),
+    machine_id: row.name,                 // shop code e.g. "VMC-01"
+    name: displayName,                    // human label
+    display_name: displayName,
     active: row.is_active,
   };
 }

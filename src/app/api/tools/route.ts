@@ -5,6 +5,15 @@ function sb() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
+function cleanToolText(s: string | null | undefined): string {
+  if (!s) return "";
+  return s
+    .replace(/A\?°/g, "°")
+    .replace(/A\?×/g, "×")
+    .replace(/A\?\?/g, "–")
+    .replace(/A\?/g, "Ø");
+}
+
 export async function GET() {
   const client = sb();
   const { data, error } = await client
@@ -13,7 +22,11 @@ export async function GET() {
     .eq("active", true)
     .order("tool_no");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  const cleaned = (data ?? []).map(t => ({
+    ...t,
+    description: cleanToolText(t.description),
+  }));
+  return NextResponse.json(cleaned);
 }
 
 export async function POST(req: NextRequest) {
