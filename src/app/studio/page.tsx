@@ -472,6 +472,38 @@ export default function StudioPage() {
             onLineClick={handleLineClick}
             highlightLine={highlightLine}
             readOnly={isGeneratingGCode}
+            issues={[
+              ...(simJob?.report.collision ? [`Collision (${simJob.report.collision.kind}) at line ${simJob.report.collision.line + 1}`] : []),
+              ...(simJob?.report.warnings ?? []),
+              ...postWarnings,
+            ]}
+            aiContext={{
+              machine: stagePlan
+                ? `${stagePlan.selectedMachine.toUpperCase()} (${controller})`
+                : controller,
+              drawingContext: [
+                plan?.partName ? `Part: ${plan.partName}` : null,
+                features?.partNumber ? `Part No: ${features.partNumber} (Rev ${features.revision})` : null,
+                features?.material ? `Material: ${features.material}` : null,
+                features?.rawDimensions
+                  ? `Finished Dim: ${features.rawDimensions.length} × ${features.rawDimensions.width} × ${features.rawDimensions.height} mm${features.rawDimensions.diameter ? ` (Ø${features.rawDimensions.diameter} mm)` : ""}`
+                  : null,
+                features?.features?.length
+                  ? `Features: ${features.features.map((f) => `${f.count}x ${f.type}${f.diameter ? ` Ø${f.diameter}` : ""}${f.depth ? ` D${f.depth}` : ""}`).join(", ")}`
+                  : null,
+                stagePlan?.stages[stageIndex]
+                  ? `Current Stage: OP${stagePlan.stages[stageIndex].opNumber} ${stagePlan.stages[stageIndex].name} (${stagePlan.stages[stageIndex].tool})`
+                  : null,
+              ].filter(Boolean).join("\n"),
+            }}
+            onApplyAiGcode={(code, autoPlay) => {
+              handleSaveProgram(code);
+              if (autoPlay) {
+                setPathMode("program");
+                setViewMode("3d");
+                setTimeout(() => setIsPlaying(true), 80);
+              }
+            }}
             className="flex-1"
           />
           <div className="shrink-0 px-3 py-2 border-t border-slate-700 bg-slate-900 text-xs">

@@ -6,7 +6,9 @@
 import { useRef, useEffect, useCallback, useState } from "react";
 import Editor, { type OnMount, type BeforeMount } from "@monaco-editor/react";
 import type * as Monaco from "monaco-editor";
+import { Sparkles, Wrench } from "lucide-react";
 import { registerGCodeLanguage, GCODE_LANGUAGE_ID, GCODE_THEME_ID } from "@/lib/gcode/syntax";
+import GCodeAIAssistant, { type GCodeAIContext } from "@/components/studio/GCodeAIAssistant";
 
 interface Props {
   value: string;
@@ -21,6 +23,12 @@ interface Props {
   highlightLine?: number;
   readOnly?: boolean;
   className?: string;
+  /** Active simulator/post warnings or collisions shown to AI for auto-fix. */
+  issues?: string[];
+  /** Drawing, machine, and tool context passed to AI assistant. */
+  aiContext?: GCodeAIContext;
+  /** Called when user clicks Apply or Apply & Play on an AI suggestion. */
+  onApplyAiGcode?: (gcode: string, autoPlay?: boolean) => void;
 }
 
 export default function GCodeMonacoEditor({
@@ -36,6 +44,9 @@ export default function GCodeMonacoEditor({
   highlightLine,
   readOnly = false,
   className = "",
+  issues = [],
+  aiContext,
+  onApplyAiGcode,
 }: Props) {
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
@@ -48,6 +59,8 @@ export default function GCodeMonacoEditor({
   onLineClickRef.current = onLineClick;
   onChangeRef.current = onChange;
   const [dirty, setDirty] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [fixCounter, setFixCounter] = useState(0);
   const hasProgram = value.trim().length > 0 || dirty;
 
   const handleBeforeMount: BeforeMount = useCallback((monaco) => {
@@ -128,7 +141,7 @@ export default function GCodeMonacoEditor({
           {dirty && <span className="text-amber-300">Unsaved</span>}
           <span className="ml-auto text-slate-500">{moves > 0 ? `${moves} moves` : "No moves yet"}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <button
             type="button"
             onClick={() => onSave?.(currentText())}
@@ -153,6 +166,40 @@ export default function GCodeMonacoEditor({
           >
             Export .nc
           </button>
+
+          <div className="ml-auto flex items-center gap-1.5">
+            <button
+              type="button"
+              disabled={readOnly}
+              onClick={() => {
+                setAiOpen(true);
+                setFixCounter((c) => c + 1);
+              }}
+              className={`flex items-center gap-1 px-2 py-1 rounded font-semibold transition-colors disabled:opacity-40 ${
+                issues.length > 0
+                  ? "bg-amber-600 hover:bg-amber-500 text-white"
+                  : "bg-slate-700 hover:bg-slate-600 text-amber-300 border border-slate-600"
+              }`}
+              title="Analyze and fix G-code issues with AI"
+            >
+              <Wrench className="w-3 h-3" />
+              Fix with AI{issues.length > 0 ? ` (${issues.length})` : ""}
+            </button>
+            <button
+              type="button"
+              disabled={readOnly}
+              onClick={() => setAiOpen((v) => !v)}
+              className={`flex items-center gap-1 px-2 py-1 rounded font-semibold transition-colors disabled:opacity-40 ${
+                aiOpen
+                  ? "bg-violet-600 text-white"
+                  : "bg-violet-950/70 hover:bg-violet-900 text-violet-200 border border-violet-700"
+              }`}
+              title="Open AI G-Code Chat"
+            >
+              <Sparkles className="w-3 h-3" />
+              AI Chat
+            </button>
+          </div>
         </div>
         <p className="text-[11px] text-slate-500">
           {dirty
@@ -194,6 +241,23 @@ export default function GCodeMonacoEditor({
           }}
         />
       </div>
+
+      <GCodeAIAssistant
+        open={aiOpen}
+        onClose={() => setAiOpen(false)}
+        gcode={currentText()}
+        issues={issues}
+        context={aiContext}
+        triggerFixCounter={fixCounter}
+        onApplyGCode={(code, autoPlay) => {
+          if (onApplyAiGcode) {
+            onApplyAiGcode(code, autoPlay);
+          } else {
+            onSave?.(code);
+            if (autoPlay) setTimeout(() => onPlay?.(), 80);
+          }
+        }}
+      />
 
       <style>{`
         .gcode-highlight-line {

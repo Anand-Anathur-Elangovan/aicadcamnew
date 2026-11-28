@@ -481,18 +481,45 @@ export default function PlaygroundPage() {
         </div>
 
         {/* ── Right: G-code editor ── */}
-        <div className="w-96 shrink-0 border-l border-zinc-800 flex flex-col">
-          <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-800 shrink-0">
-            <span className="text-xs font-semibold text-zinc-400">G-code Editor</span>
-            <span className="text-[10px] text-zinc-600">Edit → Play to simulate</span>
-          </div>
+        <div className="w-[28rem] shrink-0 border-l border-zinc-800 flex flex-col">
           <div className="flex-1 min-h-0">
             <GCodeMonacoEditor
               value={gcode}
+              programLabel={template.label}
+              moves={simJob?.report?.moves ?? 0}
+              playing={isPlaying}
               onChange={v => { setGcode(v); setIsPlaying(false); }}
               onSave={v => { setGcode(v); setIsPlaying(false); }}
+              onPlay={() => setIsPlaying(v => !v)}
+              onExport={v => {
+                const blob = new Blob([v], { type: "text/plain" });
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download = `playground_${template.id}.nc`;
+                a.click();
+              }}
               onLineClick={handleLineClick}
               highlightLine={highlightLine}
+              issues={[
+                ...(!simJob && gcode.trim() ? ["G-code parse error — simulator could not build toolpath"] : []),
+                ...(simJob?.report?.collision ? [`Collision (${simJob.report.collision.kind}) at line ${simJob.report.collision.line + 1}`] : []),
+                ...(simJob?.report?.warnings ?? []),
+              ]}
+              aiContext={{
+                machine: selMachine
+                  ? `${selMachine.machine_id} — ${selMachine.display_name || selMachine.name} (${selMachine.kind}, ${selMachine.controller})`
+                  : undefined,
+                tools: selTools.map(t => `${t.tool_no}: ${t.description}`),
+                drawingContext: `Stock Template: ${template.label} (${template.dims} mm) — ${template.desc}`,
+              }}
+              onApplyAiGcode={(code, autoPlay) => {
+                setGcode(code);
+                setIsPlaying(false);
+                if (autoPlay) {
+                  setSimKey(k => k + 1);
+                  setTimeout(() => setIsPlaying(true), 100);
+                }
+              }}
             />
           </div>
         </div>
