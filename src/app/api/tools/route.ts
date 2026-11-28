@@ -7,11 +7,12 @@ function sb() {
 
 function cleanToolText(s: string | null | undefined): string {
   if (!s) return "";
-  return s
-    .replace(/A\?°/g, "°")
-    .replace(/A\?×/g, "×")
-    .replace(/A\?\?/g, "–")
-    .replace(/A\?/g, "Ø");
+  try {
+    const bytes = Uint8Array.from(s, c => c.charCodeAt(0) & 0xff);
+    return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+  } catch {
+    return s;
+  }
 }
 
 export async function GET() {

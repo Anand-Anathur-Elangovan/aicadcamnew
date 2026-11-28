@@ -5,30 +5,33 @@ function sb() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
-/** Clean display_name — strip non-ASCII garbage from bad Unicode inserts */
+/** Fix double-encoded UTF-8 bytes stored as latin-1 chars in Supabase.
+ *  Ø  = U+00D8 → UTF-8 0xC3 0x98 → latin-1 read as Ã (195) + \x98 (152)
+ *  –  = U+2013 → UTF-8 0xE2 0x80 0x93 → latin-1 â€"
+ *  °  = U+00B0 → UTF-8 0xC2 0xB0 → latin-1 Â°
+ *  ×  = U+00D7 → UTF-8 0xC3 0x97 → latin-1 Ã\x97
+ */
 function cleanText(s: string | null | undefined): string {
   if (!s) return "";
-  // Replace common garbled sequences (e.g. A?12 → Ø12, A?? → –, A?° → °)
-  return s
-    .replace(/A\?\?/g, "–")
-    .replace(/A\?12/g, "Ø12")
-    .replace(/A\?6/g, "Ø6")
-    .replace(/A\?20/g, "Ø20")
-    .replace(/A\?10/g, "Ø10")
-    .replace(/A\?8/g, "Ø8")
-    .replace(/A\?28/g, "Ø28")
-    .replace(/A\?25/g, "Ø25")
-    .replace(/A\?°/g, "°")
-    .replace(/A\?/g, "Ø");
+  // Re-encode latin-1 string back to UTF-8 bytes, then decode as UTF-8
+  try {
+    const bytes = Uint8Array.from(s, c => c.charCodeAt(0) & 0xff);
+    return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+  } catch {
+    return s;
+  }
 }
 
 /** Map DNC machines row (name = shop code) to the Studio/Playground shape. */
 function mapMachine(row: Record<string, unknown>) {
-  const displayName = cleanText((row.display_name as string) || (row.name as string));
+  // machine_id = shop code (e.g. "VMC-01"), stored in `name` column
+  const machineId = row.name as string;
+  const rawDisplay = (row.display_name as string | null) || machineId;
+  const displayName = cleanText(rawDisplay);
   return {
     ...row,
-    machine_id: row.name,                 // shop code e.g. "VMC-01"
-    name: displayName,                    // human label
+    machine_id: machineId,
+    name: displayName,
     display_name: displayName,
     active: row.is_active,
   };
