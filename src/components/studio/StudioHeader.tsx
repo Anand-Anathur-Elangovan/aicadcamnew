@@ -91,6 +91,13 @@ export default function StudioHeader({
       {/* Spacer */}
       <div className="flex-1" />
 
+      <Link
+        href="/playground"
+        className="text-xs text-cyan-400 hover:text-cyan-300 border border-cyan-800 rounded px-2.5 py-1"
+      >
+        CNC Playground
+      </Link>
+
       {/* Keyboard hints */}
       <div className="text-[10px] text-slate-500 hidden lg:flex gap-3">
         <span>Click 3D line → sync editor</span>
